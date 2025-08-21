@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-// import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
+import { useNavigate, useLocation } from "react-router-dom";
+import { login } from "../Feature/auth/authSlice"; // Redux slice action
 import {
   Button,
   TextField,
@@ -10,14 +12,15 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-// import { loginUser } from "../features/auth/authSlice"; // <== imported
 
 const Login = () => {
-  // const dispatch = useDispatch();
-  // const { loading, error } = useSelector((state) => state.auth);
-  const [error, useError] = useState(false);
-  const [loading, useLoading] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/"; // redirect after login
 
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -30,7 +33,21 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(loginUser(formData));
+    setLoading(true);
+    setError("");
+
+    // Simulate login delay
+    setTimeout(() => {
+      // Here you can validate with your loginDetails array if you want
+      const validUser = true; // For example purposes, assume any login is valid
+      if (validUser) {
+        dispatch(login({ email: formData.email })); // update Redux state
+        navigate(from, { replace: true }); // redirect to previous page or home
+      } else {
+        setError("Invalid email or password");
+      }
+      setLoading(false);
+    }, 500);
   };
 
   return (

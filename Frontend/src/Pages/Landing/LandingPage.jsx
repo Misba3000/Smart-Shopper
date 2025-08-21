@@ -1,10 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Grid, Box, Typography, Button } from "@mui/material";
+import { useLocation } from "react-router-dom";
 import Login from "../../Components/Login";
 import Register from "../../Components/Register";
 
 const LandingPage = () => {
+  const location = useLocation();
   const [showLogin, setShowLogin] = useState(true);
+
+  // When coming from Navbar or ProductCard with navigate("/", { state: ... })
+  useEffect(() => {
+    if (location.state?.openLogin) {
+      setShowLogin(true);
+    }
+    if (location.state?.openRegister) {
+      setShowLogin(false);
+    }
+  }, [location.state]);
 
   return (
     <Grid container sx={{ height: "100vh" }}>
