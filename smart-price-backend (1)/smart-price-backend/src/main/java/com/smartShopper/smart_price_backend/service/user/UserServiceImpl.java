@@ -30,5 +30,34 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> findByEmail(String email) {
         return repo.findByEmail(email);
+
+    }
+
+    // Get user by ID
+    public User getUserById(Long userId) {
+        return repo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+    }
+
+    // Get user by email
+    public User getUserByEmail(String email) {
+        return repo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    // Get all users (optional)
+    public List<User> getAllUsers() {
+        return repo.findAll();
+    }
+
+    // Save new user
+    public User saveUser(User user) {
+        return repo.save(user);
+    }
+
+    // Delete user
+    public void deleteUser(Long userId) {
+        User user = getUserById(userId);
+        repo.delete(user);
     }
 }

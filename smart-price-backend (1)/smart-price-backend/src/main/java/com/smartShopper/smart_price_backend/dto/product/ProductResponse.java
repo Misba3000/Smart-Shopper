@@ -1,80 +1,174 @@
 package com.smartShopper.smart_price_backend.dto.product;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public class ProductResponse {
+
+    private Long id;
     private String title;
     private String brand;
-    private String platform;
-    private String productUrl;
-    private BigDecimal price;
+    private String category;
+    private String description;
     private String imageUrl;
-    private String source;
+    private BigDecimal price;
     private Double rating;
     private Integer reviewCount;
-    private String description;
+    private String platform;
+    private String productUrl;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
-    // Default constructor
-    public ProductResponse() {}
+    // Constructors
+    public ProductResponse() {
+    }
 
-    // Constructor matching your scraper usage
+    public ProductResponse(String title, String brand, LocalDateTime createdAt, String description,
+                           Long id, String imageUrl, String platform, BigDecimal price,
+                           String productUrl, Double rating, Integer reviewCount, LocalDateTime updatedAt) {
+        this.title = title;
+        this.brand = brand;
+        this.createdAt = createdAt;
+        this.description = description;
+        this.id = id;
+        this.imageUrl = imageUrl;
+        this.platform = platform;
+        this.price = price;
+        this.productUrl = productUrl;
+        this.rating = rating;
+        this.reviewCount = reviewCount;
+        this.updatedAt = updatedAt;
+    }
+
+    // Alternative constructor for scraper
     public ProductResponse(String title, String brand, String platform, String productUrl,
-                           BigDecimal price, String imageUrl, String source, Double rating,
-                           Integer reviewCount, String description) {
+                           BigDecimal price, String imageUrl, String category,
+                           Double rating, Integer reviewCount, String description) {
         this.title = title;
         this.brand = brand;
         this.platform = platform;
         this.productUrl = productUrl;
         this.price = price;
         this.imageUrl = imageUrl;
-        this.source = source;
+        this.category = category;
         this.rating = rating;
         this.reviewCount = reviewCount;
         this.description = description;
     }
 
-    // All getters and setters
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
 
-    public String getBrand() { return brand; }
-    public void setBrand(String brand) { this.brand = brand; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getPlatform() { return platform; }
-    public void setPlatform(String platform) { this.platform = platform; }
+    public String getTitle() {
+        return title;
+    }
 
-    public String getProductUrl() { return productUrl; }
-    public void setProductUrl(String productUrl) { this.productUrl = productUrl; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
+    public String getBrand() {
+        return brand;
+    }
 
-    // For frontend compatibility - both getPrice() and getCurrentPrice()
-    public BigDecimal getCurrentPrice() { return this.price; }
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getCategory() {
+        return category;
+    }
 
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
+    public void setCategory(String category) {
+        this.category = category;
+    }
 
-    public Double getRating() { return rating; }
-    public void setRating(Double rating) { this.rating = rating; }
+    public String getDescription() {
+        return description;
+    }
 
-    public Integer getReviewCount() { return reviewCount; }
-    public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public Double getRating() {
+        return rating;
+    }
+
+    public void setRating(Double rating) {
+        this.rating = rating;
+    }
+
+    public Integer getReviewCount() {
+        return reviewCount;
+    }
+
+    public void setReviewCount(Integer reviewCount) {
+        this.reviewCount = reviewCount;
+    }
+
+    public String getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(String platform) {
+        this.platform = platform;
+    }
+
+    public String getProductUrl() {
+        return productUrl;
+    }
+
+    public void setProductUrl(String productUrl) {
+        this.productUrl = productUrl;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
     @Override
     public String toString() {
         return "ProductResponse{" +
-                "title='" + title + '\'' +
+                "id=" + id +
+                ", title='" + title + '\'' +
                 ", brand='" + brand + '\'' +
                 ", platform='" + platform + '\'' +
                 ", price=" + price +
-                ", rating=" + rating +
                 '}';
     }
 }

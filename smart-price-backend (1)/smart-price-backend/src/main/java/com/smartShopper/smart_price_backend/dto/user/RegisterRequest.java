@@ -1,5 +1,6 @@
 package com.smartShopper.smart_price_backend.dto.user;
 
+import com.smartShopper.smart_price_backend.entity.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -13,6 +14,16 @@ public class RegisterRequest {
 
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
+
+    private User.Role role;
+
+    public User.Role getRole() {
+        return role;
+    }
+
+    public void setRole(User.Role role) {
+        this.role = role;
+    }
 
     // getters & setters
     public String getName() { return name; }

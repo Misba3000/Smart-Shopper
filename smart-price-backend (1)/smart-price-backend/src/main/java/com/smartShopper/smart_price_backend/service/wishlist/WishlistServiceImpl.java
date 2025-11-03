@@ -1,158 +1,130 @@
 package com.smartShopper.smart_price_backend.service.wishlist;
 
-import com.smartShopper.smart_price_backend.dto.product.ProductResponse;
-import com.smartShopper.smart_price_backend.dto.wishlist.WishlistDTO;
+import com.smartShopper.smart_price_backend.dto.Wishlist.AddToWishlistRequest;
+import com.smartShopper.smart_price_backend.dto.Wishlist.WishlistResponse;
+import com.smartShopper.smart_price_backend.entity.Product;
 import com.smartShopper.smart_price_backend.entity.User;
 import com.smartShopper.smart_price_backend.entity.Wishlist;
-import com.smartShopper.smart_price_backend.repository.UserRepository;
 import com.smartShopper.smart_price_backend.repository.WishlistRepository;
-import com.smartShopper.smart_price_backend.service.WishlistService;
+import com.smartShopper.smart_price_backend.service.product.ProductService;
+import com.smartShopper.smart_price_backend.service.user.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-public class WishlistServiceImpl implements WishlistService {
+public class WishlistServiceImpl {
 
-    private final WishlistRepository wishlistRepo;
-    private final UserRepository userRepo;
+    @Autowired
+    private WishlistRepository wishlistRepository;
 
-    public WishlistServiceImpl(WishlistRepository wishlistRepo, UserRepository userRepo) {
-        this.wishlistRepo = wishlistRepo;
-        this.userRepo = userRepo;
-    }
+    @Autowired
+    private ProductService productService;
 
-    @Override
-    public WishlistDTO addToWishlist(Long userId, ProductResponse product) {
-        // 1. Get user
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @Autowired
+    private UserService userService;
 
-        // 2. Validate required fields
-        if (product.getProductUrl() == null || product.getProductUrl().isEmpty()) {
-            throw new RuntimeException("Product URL is required");
-        }
-        if (product.getTitle() == null || product.getTitle().isEmpty()) {
-            throw new RuntimeException("Product title is required");
-        }
+    @Transactional
+    public WishlistResponse addToWishlist(Long userId, AddToWishlistRequest request) {
+        User user = userService.getUserById(userId);
 
-        // 3. Generate a platformProductId if not available from the product
-        String platformProductId = extractPlatformProductId(product.getProductUrl());
-        if (platformProductId == null || platformProductId.isEmpty()) {
-            // Fallback: generate a unique ID
-            platformProductId = "wishlist-" + UUID.randomUUID().toString();
-        }
+        // Check if product already exists by its unique URL
+        Product product = productService.findByPlatformProductUrl(request.getProductUrl())
+                .orElseGet(() -> {
+                    Product newProduct = new Product();
+                    newProduct.setTitle(request.getTitle());
+                    newProduct.setBrand(request.getBrand());
+                    newProduct.setPlatform(request.getPlatform());
+                    newProduct.setPlatformProductUrl(request.getProductUrl());
+                    newProduct.setCurrentPrice(
+                            request.getCurrentPrice() != null ? request.getCurrentPrice() : request.getPrice());
+                    newProduct.setRating(request.getRating());
+                    newProduct.setReviewCount(request.getReviewCount());
+                    newProduct.setImageUrl(request.getImageUrl());
+                    newProduct.setDescription(request.getDescription());
+                    return productService.saveProduct(newProduct);
+                });
 
-        // 4. Prevent duplicates
-        if (wishlistRepo.existsByUserAndPlatformProductId(user, platformProductId)) {
+        // Check if the wishlist already contains this product for the user
+        if (wishlistRepository.existsByUserIdAndProductId(userId, product.getId())) {
             throw new RuntimeException("Product already in wishlist");
         }
 
-        // 5. Convert price safely
-        BigDecimal price = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
+        // Create wishlist entry
+        Wishlist wishlist = new Wishlist();
+        wishlist.setUser(user);
+        wishlist.setProduct(product);
+        wishlist.setTargetPrice(request.getTargetPrice());
+        wishlist.setAlertEnabled(request.isAlertEnabled());
 
-        // 6. Create Wishlist entity with platformProductId
-        Wishlist wishlist = new Wishlist(
-                user,
-                product.getTitle(),
-                product.getBrand(),
-                product.getPlatform(),
-                product.getProductUrl(),
-                price,
-                product.getImageUrl(),
-                product.getRating(),
-                product.getReviewCount(),
-                platformProductId
-        );
+        Wishlist savedWishlist = wishlistRepository.save(wishlist);
 
-        // 7. Save to database
-        Wishlist saved = wishlistRepo.save(wishlist);
+        System.out.println("✅ Wishlist created - ID: " + savedWishlist.getId() +
+                ", Alert: " + savedWishlist.isAlertEnabled() +
+                ", Target: " + savedWishlist.getTargetPrice());
 
-        // 8. Map to DTO and return
-        return mapToDTO(saved);
+        return convertToResponse(savedWishlist);
     }
 
-    @Override
-    public List<WishlistDTO> getUserWishlist(Long userId) {
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public WishlistResponse getWishlistItem(Long wishlistId) {
+        Wishlist wishlist = wishlistRepository.findById(wishlistId)
+                .orElseThrow(() -> new RuntimeException("Wishlist item not found"));
+        return convertToResponse(wishlist);
+    }
 
-        return wishlistRepo.findByUser(user)
+    public List<WishlistResponse> getUserWishlist(Long userId) {
+        return wishlistRepository.findByUserId(userId)
                 .stream()
-                .map(this::mapToDTO)
+                .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
-    @Override
-    public void removeFromWishlist(Long userId, Long wishlistId) {
-        Wishlist wishlist = wishlistRepo.findById(wishlistId)
+    @Transactional
+    public WishlistResponse updateWishlist(Long wishlistId, BigDecimal targetPrice, Boolean alertEnabled) {
+        Wishlist wishlist = wishlistRepository.findById(wishlistId)
                 .orElseThrow(() -> new RuntimeException("Wishlist item not found"));
 
-        if (!wishlist.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized to delete this wishlist item");
+        // Update fields
+        if (targetPrice != null) {
+            wishlist.setTargetPrice(targetPrice);
+        }
+        if (alertEnabled != null) {
+            wishlist.setAlertEnabled(alertEnabled);
         }
 
-        wishlistRepo.delete(wishlist);
+        // Save to database - this ensures persistence
+        Wishlist updatedWishlist = wishlistRepository.save(wishlist);
+
+        // Force flush to ensure database update
+        wishlistRepository.flush();
+
+        System.out.println("✅ Wishlist updated in DB - ID: " + updatedWishlist.getId() +
+                ", Alert: " + updatedWishlist.isAlertEnabled() +
+                ", Target: " + updatedWishlist.getTargetPrice());
+
+        return convertToResponse(updatedWishlist);
     }
 
-    private WishlistDTO mapToDTO(Wishlist wishlist) {
-        WishlistDTO dto = new WishlistDTO();
-        dto.setId(wishlist.getId());
-        dto.setTitle(wishlist.getTitle());
-        dto.setBrand(wishlist.getBrand());
-        dto.setPlatform(wishlist.getPlatform());
-        dto.setProductUrl(wishlist.getProductUrl());
-        dto.setPrice(wishlist.getPrice());
-        dto.setImageUrl(wishlist.getImageUrl());
-        dto.setRating(wishlist.getRating());
-        dto.setReviewCount(wishlist.getReviewCount());
-        dto.setPlatformProductId(wishlist.getPlatformProductId());
-        return dto;
+    @Transactional
+    public void deleteWishlist(Long wishlistId) {
+        Wishlist wishlist = wishlistRepository.findById(wishlistId)
+                .orElseThrow(() -> new RuntimeException("Wishlist item not found"));
+        wishlistRepository.delete(wishlist);
     }
 
-    // Helper method to extract platform product ID from URL
-    private String extractPlatformProductId(String productUrl) {
-        if (productUrl == null || productUrl.isEmpty()) {
-            return null;
-        }
-
-        try {
-            // Extract product ID based on platform
-            if (productUrl.contains("amazon.in")) {
-                // Amazon URL pattern: /dp/[productId] or /gp/product/[productId]
-                if (productUrl.contains("/dp/")) {
-                    String[] parts = productUrl.split("/dp/");
-                    if (parts.length > 1) {
-                        String productIdPart = parts[1].split("/")[0];
-                        return productIdPart.split("\\?")[0]; // Remove query parameters
-                    }
-                } else if (productUrl.contains("/gp/product/")) {
-                    String[] parts = productUrl.split("/gp/product/");
-                    if (parts.length > 1) {
-                        String productIdPart = parts[1].split("/")[0];
-                        return productIdPart.split("\\?")[0]; // Remove query parameters
-                    }
-                }
-            } else if (productUrl.contains("meesho.com")) {
-                // Meesho URL pattern: /p/[productName]/[productId]
-                if (productUrl.contains("/p/")) {
-                    String[] parts = productUrl.split("/p/");
-                    if (parts.length > 1) {
-                        String[] pathParts = parts[1].split("/");
-                        if (pathParts.length > 1) {
-                            return pathParts[pathParts.length - 1]; // Last part is product ID
-                        }
-                    }
-                }
-            }
-
-            // Fallback: return the URL itself
-            return productUrl;
-        } catch (Exception e) {
-            return productUrl; // Fallback to URL if extraction fails
-        }
+    // Helper method to convert entity to response
+    private WishlistResponse convertToResponse(Wishlist wishlist) {
+        WishlistResponse response = new WishlistResponse();
+        response.setId(wishlist.getId());
+        response.setProduct(productService.convertToResponse(wishlist.getProduct()));
+        response.setTargetPrice(wishlist.getTargetPrice());
+        response.setAlertEnabled(wishlist.isAlertEnabled());
+        response.setAddedAt(wishlist.getCreatedAt());
+        response.setLastAlertSentAt(wishlist.getLastAlertSentAt());
+        return response;
     }
 }
